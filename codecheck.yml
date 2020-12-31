@@ -1,0 +1,57 @@
+steps:
+  - task: Bash@3
+    inputs:
+      targetType: 'inline'
+      script: |
+        sudo apt-get install pylint
+        pylint *.py  || true
+    displayName: Python Lint Check
+    condition: eq(variables.python, true)
+
+  - task: Bash@3
+    inputs:
+      targetType: 'inline'
+      script: |
+        cd /home/vsts/work 
+        npm install jslint
+        cd -
+        /home/vsts/work/node_modules/jslint/bin/jslint.js '**/*.js' || true
+    displayName: NodeJS Lint Check
+    condition: eq(variables.nodeJS, true)
+
+  - task: Bash@3
+    inputs:
+      targetType: 'inline'
+      script: |
+        #mvn compile checkstyle:check
+        true
+    displayName: Maven Lint Check
+    condition: eq(variables.javaMaven, true)
+ 
+  - task: Bash@3
+    inputs:
+      targetType: 'inline'
+      script: |
+        curl -s -O https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.5.0.2216-linux.zip
+        unzip sonar-scanner-cli-4.5.0.2216-linux.zip 
+    displayName: Install SonarScanner
+    condition: or(eq(variables.nodeJS, true), eq(variables.python, true))
+
+  - task: Bash@3
+    inputs:
+      targetType: 'inline'
+      script: |
+        sonar-scanner-4.5.0.2216-linux/bin/sonar-scanner -Dsonar.projectKey=$(component_name) -Dsonar.sources=. -Dsonar.host.url=http://$(SONAR_SERVER):9000 -Dsonar.login=$(SONAR_TOKEN)
+    displayName: Run SonarScan
+    condition: or(eq(variables.nodeJS, true), eq(variables.python, true))
+
+  - task: Bash@3
+    inputs:
+      targetType: 'inline'
+      script: |
+        mvn compile sonar:sonar -Dsonar.projectKey=$(component_name) -Dsonar.host.url=http://$(SONAR_SERVER):9000 -Dsonar.login=$(SONAR_TOKEN)
+    displayName: Run Maven SonarScan
+    condition: eq(variables.javaMaven, true)
+
+  
+
